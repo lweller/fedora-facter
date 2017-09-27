@@ -1,0 +1,146 @@
+From 2da221070b7caf778ec24339166a4b6ccbf0fc3a Mon Sep 17 00:00:00 2001
+From: Lucien Weller <lucien@wellernet.ch>
+Date: Tue, 26 Sep 2017 21:56:57 +0200
+Subject: [PATCH 1/1] fixed issue FACT-1764 when zfs-fuse is installed but not
+ running
+
+---
+ lib/facter/zpool_version.rb                 |  8 ++++--
+ spec/fixtures/unit/zpool_version/zpool_help | 41 +++++++++++++++++++++++++++++
+ spec/unit/zpool_version_spec.rb             | 10 ++++++-
+ 3 files changed, 56 insertions(+), 3 deletions(-)
+ create mode 100644 spec/fixtures/unit/zpool_version/zpool_help
+
+diff --git a/lib/facter/zpool_version.rb b/lib/facter/zpool_version.rb
+index c59fc5ab..30f077b4 100644
+--- a/lib/facter/zpool_version.rb
++++ b/lib/facter/zpool_version.rb
+@@ -3,8 +3,12 @@ require 'facter'
+ Facter.add('zpool_version') do
+   setcode do
+     if Facter::Core::Execution.which('zpool')
+-      zpool_v = Facter::Core::Execution.exec('zpool upgrade -v')
+-      zpool_version = zpool_v.scan(/^\s+(\d+)\s+/m).flatten.last unless zpool_v.nil?
++      zpool_help = Facter::Core::Execution.exec('zpool -? 2> /dev/null')
++      zpool_has_upgrade = zpool_help.match(/\A.*upgrade.*\z/m) unless zpool_help.nil?
++      if zpool_has_upgrade
++        zpool_v = Facter::Core::Execution.exec('zpool upgrade -v')
++        zpool_version = zpool_v.scan(/^\s+(\d+)\s+/m).flatten.last unless zpool_v.nil?
++      end
+     end
+   end
+ end
+diff --git a/spec/fixtures/unit/zpool_version/zpool_help b/spec/fixtures/unit/zpool_version/zpool_help
+new file mode 100644
+index 00000000..55fb3d70
+--- /dev/null
++++ b/spec/fixtures/unit/zpool_version/zpool_help
+@@ -0,0 +1,41 @@
++usage: zpool command args ...
++where 'command' is one of the following:
++
++	create [-fn] [-o property=value] ... 
++	    [-O file-system-property=value] ... 
++	    [-m mountpoint] [-R root] <pool> <vdev> ...
++	destroy [-f] <pool>
++
++	add [-fn] [-o property=value] <pool> <vdev> ...
++	remove <pool> <device> ...
++
++	list [-H] [-o property[,...]] [-T d|u] [pool] ... [interval [count]]
++	iostat [-v] [-T d|u] [pool] ... [interval [count]]
++	status [-vx] [-T d|u] [pool] ... [interval [count]]
++
++	online <pool> <device> ...
++	offline [-t] <pool> <device> ...
++	clear [-nF] <pool> [device]
++
++	attach [-f] [-o property=value] <pool> <device> <new-device>
++	detach <pool> <device>
++	replace [-f] [-o property=value] <pool> <device> [new-device]
++	split [-n] [-R altroot] [-o mntopts]
++	    [-o property=value] <pool> <newpool> [<device> ...]
++
++	scrub [-s] <pool> ...
++
++	import [-d dir] [-D]
++	import [-d dir | -c cachefile] [-n] -F <pool | id>
++	import [-o mntopts] [-o property=value] ... 
++	    [-d dir | -c cachefile] [-D] [-f] [-R root] -a [-v]
++	import [-o mntopts] [-o property=value] ... 
++	    [-d dir | -c cachefile] [-D] [-f] [-R root] <pool | id> [newpool]
++	export [-f] <pool> ...
++	upgrade
++	upgrade -v
++	upgrade [-V version] <-a | pool ...>
++
++	history [-il] [<pool>] ...
++	get <"all" | property[,...]> <pool> ...
++	set <property=value> <pool> 
+diff --git a/spec/unit/zpool_version_spec.rb b/spec/unit/zpool_version_spec.rb
+index ad7db153..fd42e94c 100644
+--- a/spec/unit/zpool_version_spec.rb
++++ b/spec/unit/zpool_version_spec.rb
+@@ -19,43 +19,50 @@ describe "zpool_version fact" do
+   end
+ 
+   it "should return correct version on Solaris 10" do
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns(my_fixture_read('solaris_10'))
+     Facter.fact(:zpool_version).value.should == "22"
+   end
+ 
+   it "should return correct version on Solaris 11" do
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns(my_fixture_read('solaris_11'))
+     Facter.fact(:zpool_version).value.should == "33"
+   end
+ 
+   it "should return correct version on FreeBSD 8.2" do
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns(my_fixture_read('freebsd_8.2'))
+     Facter.fact(:zpool_version).value.should == "15"
+   end
+ 
+   it "should return correct version on FreeBSD 9.0" do
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns(my_fixture_read('freebsd_9.0'))
+     Facter.fact(:zpool_version).value.should == "28"
+   end
+ 
+   it "should return correct version on Linux with ZFS-fuse" do
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns(my_fixture_read('linux-fuse_0.6.9'))
+     Facter.fact(:zpool_version).value.should == "23"
+   end
+ 
+   it "should return correct version on Linux with zfsonlinux" do
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns(my_fixture_read('zfsonlinux_0.6.1'))
+     Facter.fact(:zpool_version).value.should == "28"
+   end
+ 
+   it "should return nil if zpool is not available" do
+     Facter::Core::Execution.stubs(:which).with("zpool").returns(nil)
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns(my_fixture_read('linux-fuse_0.6.9'))
+     Facter.fact(:zpool_version).value.should == nil
+   end
+ 
+   it "should return nil if zpool fails to run" do
+-    Facter::Core::Execution.stubs(:exec).with("zpool upgrade -v").returns('')
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(nil)
+     Facter.fact(:zpool_version).value.should == nil
+   end
+ 
+@@ -65,6 +72,7 @@ describe "zpool_version fact" do
+     Facter::Core::Execution.stubs(:which).
+       with("zpool").
+       returns(nil,nil,"/usr/bin/zpool")
++    Facter::Core::Execution.stubs(:exec).with("zpool -? 2> /dev/null").returns(my_fixture_read('zpool_help'))
+     Facter::Core::Execution.stubs(:exec).
+       with("zpool upgrade -v").
+       returns(my_fixture_read('linux-fuse_0.6.9'))
+-- 
+2.13.5
+
