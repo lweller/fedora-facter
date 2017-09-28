@@ -29,6 +29,7 @@ URL:            https://puppetlabs.com/%{name}
 Source0:        https://downloads.puppetlabs.com/%{name}/%{name}-%{version}.tar.gz
 Source1:        https://downloads.puppetlabs.com/%{name}/%{name}-%{version}.tar.gz.asc
 Patch0:         facter-2.4.4-issue-FACT-1764.patch
+Patch1:         facter-2.4.4-issue-FACT-1766.patch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 # Upstream claims to only support 1.8.7 and higher
@@ -73,6 +74,7 @@ key off the values returned by facts.
 %setup -q
 
 %patch0 -p1
+%patch1 -p1
 
 %build
 # Nothing to build
@@ -118,6 +120,9 @@ rspec spec
 
 
 %changelog
+* Thu Sep 28 2017 Lucien Weller <lucien@wellernet.ch> - 2.4.4-7
+- Apply upstream patch for issue https://tickets.puppetlabs.com/browse/FACT-1766
+
 * Wed Sep 27 2017 Lucien Weller <lucien@wellernet.ch> - 2.4.4-7
 - Apply upstream patch for issue https://tickets.puppetlabs.com/browse/FACT-1764
 

@@ -1,0 +1,44 @@
+From a4fe3ec204f8a6860432a4cd2270edc1a33b3bd0 Mon Sep 17 00:00:00 2001
+From: Lucien Weller <lucien@wellernet.ch>
+Date: Thu, 28 Sep 2017 22:47:25 +0200
+Subject: [PATCH 1/1] (FACT-1766) install man page independently from rdoc gem
+
+---
+ install.rb | 13 +++++--------
+ 1 file changed, 5 insertions(+), 8 deletions(-)
+
+diff --git a/install.rb b/install.rb
+index f8cbdc4b..0af06989 100755
+--- a/install.rb
++++ b/install.rb
+@@ -138,14 +138,11 @@ def prepare_installation
+     InstallOptions.ri  = false
+   end
+ 
+-
+-  if $haveman
+-    InstallOptions.man = true
+-    if is_windows?
+-      InstallOptions.man  = false
+-    end
+-  else
++  # defaut man page creattion to false on windows, true otherwise
++  if is_windows?
+     InstallOptions.man = false
++  else
++    InstallOptions.man = true
+   end
+ 
+   ARGV.options do |opts|
+@@ -157,7 +154,7 @@ def prepare_installation
+     opts.on('--[no-]ri', 'Prevents the creation of RI output.', 'Default off on mswin32.') do |onri|
+       InstallOptions.ri = onri
+     end
+-    opts.on('--[no-]man', 'Presents the creation of man pages.', 'Default on.') do |onman|
++    opts.on('--[no-]man', 'Prevents the creation of man pages.', 'Default on, off for mswin32.') do |onman|
+     InstallOptions.man = onman
+     end
+     opts.on('--destdir[=OPTIONAL]', 'Installation prefix for all targets', 'Default essentially /') do |destdir|
+-- 
+2.13.5
+
